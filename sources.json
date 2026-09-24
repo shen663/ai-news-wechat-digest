@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Google News 中文 AI",
+    "region": "cn",
+    "kind": "rss",
+    "url": "https://news.google.com/rss/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD&hl=zh-CN&gl=CN&ceid=CN:zh-Hans"
+  },
+  {
+    "name": "Bing News 中文 AI",
+    "region": "cn",
+    "kind": "rss",
+    "url": "https://www.bing.com/news/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD&format=rss"
+  },
+  {
+    "name": "量子位",
+    "region": "cn",
+    "kind": "rss",
+    "url": "https://www.qbitai.com/feed"
+  },
+  {
+    "name": "TechCrunch AI",
+    "region": "global",
+    "kind": "rss",
+    "url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+  },
+  {
+    "name": "The Verge AI",
+    "region": "global",
+    "kind": "rss",
+    "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+  },
+  {
+    "name": "Hacker News",
+    "region": "global",
+    "kind": "hackernews"
+  }
+]
