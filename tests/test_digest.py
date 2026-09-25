@@ -47,6 +47,24 @@ class DigestTests(unittest.TestCase):
         self.assertEqual(request.full_url, "https://api.deepseek.com/responses")
         self.assertEqual(json.loads(request.data)["model"], "deepseek-flash")
 
+    def test_deepseek_accepts_one_domestic_story_when_both_regions_are_covered(self):
+        now = datetime.now(digest.CHINA_TIME)
+        articles = [digest.Article(f"AI event {i}", f"https://example.com/{i}", now,
+                                   "cn" if i < 2 else "global", f"source-{i}")
+                    for i in range(5)]
+        stories = [digest.Story(article, {article.source}, {article.url}, 50 - i)
+                   for i, article in enumerate(articles)]
+        chosen = [{"id": f"C{i}", "region": "cn" if i == 0 else "global",
+                   "title_zh": f"标题{i}", "summary_zh": f"摘要{i}"} for i in range(5)]
+        response = {"status": "completed", "output": [{"content": [
+            {"type": "output_text", "text": json.dumps({"items": chosen}, ensure_ascii=False)}]}]}
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test"}), patch.object(
+            digest.urllib.request, "urlopen",
+            return_value=io.BytesIO(json.dumps(response).encode("utf-8"))
+        ):
+            items = digest.deepseek_digest(stories, now)
+        self.assertEqual([item["region"] for item in items].count("cn"), 1)
+
     def test_rss_and_atom_parse_dates_links_and_regions(self):
         rss = b"""<rss><channel><item><title>OpenAI launches a model</title>
         <link>https://example.com/story</link><pubDate>Wed, 23 Sep 2026 10:00:00 GMT</pubDate>

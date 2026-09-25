@@ -369,9 +369,10 @@ def deepseek_digest(stories: list[Story], now: datetime) -> list[dict] | None:
         if any(r not in {"cn", "global"} for r in regions):
             raise ValueError("model returned an invalid region")
         selected = [indexed[i] for i in ids]
-        if all(sum(s.article.region == r for s in candidates) >= 2 for r in ("cn", "global")):
-            if any(regions.count(r) < 2 for r in ("cn", "global")):
-                raise ValueError("model broke region balance")
+        # Keep both regions represented even when only one suitable story is found in one region.
+        if all(any(s.article.region == r for s in candidates) for r in ("cn", "global")):
+            if any(regions.count(r) == 0 for r in ("cn", "global")):
+                raise ValueError("model omitted a region")
         if any(similar(a.article.title, b.article.title)
                for i, a in enumerate(selected) for b in selected[i + 1:]):
             raise ValueError("model selected duplicate event")
