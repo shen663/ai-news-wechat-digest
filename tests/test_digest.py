@@ -97,6 +97,17 @@ class DigestTests(unittest.TestCase):
         self.assertGreaterEqual(sum(s.article.region == "cn" for s in selected), 2)
         self.assertGreaterEqual(sum(s.article.region == "global" for s in selected), 2)
 
+    def test_collection_retries_until_network_recovers(self):
+        now = datetime.now(digest.CHINA_TIME)
+        article = digest.Article("百度发布新模型", "https://example.com/one", now, "cn", "test")
+        with patch.object(digest, "collect", side_effect=[
+            digest.AllSourcesFailed("offline"), digest.AllSourcesFailed("offline"), [article]
+        ]) as collect, patch.object(digest.time, "sleep") as sleep:
+            self.assertEqual(digest.collect_with_retry([{"name": "test"}], now), [article])
+        self.assertEqual(collect.call_count, 3)
+        self.assertEqual(sleep.call_count, 2)
+        sleep.assert_any_call(90)
+
     def test_delivery_is_recorded_once(self):
         now = datetime.now(digest.CHINA_TIME)
         articles = [digest.Article(f"AI event {i}", f"https://example.com/{i}",

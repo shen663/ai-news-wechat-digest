@@ -17,6 +17,7 @@ import os
 import re
 import sqlite3
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -53,6 +54,10 @@ GLOBAL_SUBJECTS = re.compile(
     re.IGNORECASE,
 )
 FOCUSED_SOURCES = {"量子位", "TechCrunch AI", "The Verge AI"}
+
+
+class AllSourcesFailed(RuntimeError):
+    """No configured source was reachable during collection."""
 
 
 class PushRejected(RuntimeError):
@@ -240,9 +245,23 @@ def collect(sources: list[dict], now: datetime) -> list[Article]:
             except (ET.ParseError, ValueError, OSError, urllib.error.URLError) as exc:
                 LOG.warning("Source %s failed: %s", source["name"], type(exc).__name__)
     if not succeeded:
-        raise RuntimeError("All news sources failed; no digest was sent")
+        raise AllSourcesFailed("All news sources failed; no digest was sent")
     LOG.info("%d recent AI candidates", len(gathered))
     return gathered
+
+
+def collect_with_retry(sources: list[dict], now: datetime, attempts: int = 4,
+                       delay_seconds: int = 90) -> list[Article]:
+    for attempt in range(attempts):
+        try:
+            return collect(sources, now)
+        except AllSourcesFailed:
+            if attempt == attempts - 1:
+                raise
+            LOG.warning("All sources failed; retrying collection in %d seconds (%d/%d)",
+                        delay_seconds, attempt + 1, attempts - 1)
+            time.sleep(delay_seconds)
+    raise AssertionError("unreachable")
 
 
 def normalized_title(title: str) -> str:
@@ -458,7 +477,7 @@ def run(dry_run: bool, source_file: Path, db_file: Path) -> int:
         sources = json.loads(source_file.read_text(encoding="utf-8"))
         if not isinstance(sources, list) or not sources:
             raise ValueError("sources.json must contain a non-empty array")
-        stories = unseen_stories(conn, group_stories(collect(sources, now), now))
+        stories = unseen_stories(conn, group_stories(collect_with_retry(sources, now, attempts=1 if dry_run else 4), now))
         if not stories:
             raise RuntimeError("No new, recent AI stories found; no digest was sent")
         if not dry_run and not os.getenv("DEEPSEEK_API_KEY"):
