@@ -312,6 +312,17 @@ def choose_balanced(stories: list[Story], count: int = 5) -> list[Story]:
     return selected[:count]
 
 
+def parse_deepseek_items(raw: str) -> list[dict]:
+    body = raw.strip()
+    if body.startswith("```"):
+        opening, separator, rest = body.partition("\n")
+        if separator and opening.strip().lower() in {"```json", "```"}:
+            body = rest.rstrip()
+            if body.endswith("```"):
+                body = body[:-3].rstrip()
+    return json.loads(body)["items"]
+
+
 def deepseek_digest(stories: list[Story], now: datetime) -> list[dict] | None:
     api_key = os.getenv("DEEPSEEK_API_KEY", "")
     if not api_key:
@@ -373,7 +384,7 @@ def deepseek_digest(stories: list[Story], now: datetime) -> list[dict] | None:
             try:
                 if result.get("status") != "completed":
                     raise ValueError(f"response status {result.get('status')}")
-                proposed = json.loads(raw)["items"]
+                proposed = parse_deepseek_items(raw)
                 break
             except (ValueError, KeyError, TypeError):
                 LOG.warning("DeepSeek returned unusable output (status=%s, chars=%d, reason=%s, prefix=%r)%s",

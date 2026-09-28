@@ -47,6 +47,11 @@ class DigestTests(unittest.TestCase):
         self.assertEqual(request.full_url, "https://api.deepseek.com/responses")
         self.assertEqual(json.loads(request.data)["model"], "deepseek-flash")
 
+    def test_deepseek_parses_fenced_json_items(self):
+        item = {"id": "C0", "region": "cn", "title_zh": "标题", "summary_zh": "摘要"}
+        fenced = "```json\n" + json.dumps({"items": [item]}, ensure_ascii=False) + "\n```"
+        self.assertEqual(digest.parse_deepseek_items(fenced), [item])
+
     def test_deepseek_accepts_one_domestic_story_when_both_regions_are_covered(self):
         now = datetime.now(digest.CHINA_TIME)
         articles = [digest.Article(f"AI event {i}", f"https://example.com/{i}", now,
